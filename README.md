@@ -8,5 +8,5 @@
 | Classifier 3 (MAP) | No | Bo | No | | ^ | 
 | Classifier 4 (NN) | No |  | No | | | 
 | Classifier 5 (kNN) | No |  | No | | | 
-| Error Analysis (MED, GED, MAP) | No | Elijah | No | | Made all the basics, just have to code the correct discriminant functions. |
-| Error Analysis (NN, kNN) | No |  | No | | | 
+| Error Analysis (MED) | No | Elijah | No | | Made all the basics, just have to plot. Might be easily able to extend this to GED and MAP.|
+| Error Analysis (GED, MAP, NN, kNN) | |  | | | | 
