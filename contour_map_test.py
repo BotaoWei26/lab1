@@ -1,7 +1,8 @@
-import numpy as np
 import matplotlib.pyplot as plt
-from utils import gen_cluster, gen_ellipse
+from utils import gen_cluster, ellipse_points
 from classifiers import *
+import numpy as np
+from matplotlib.lines import Line2D
 
 
 def get_feature_range(feats):
@@ -16,8 +17,13 @@ def plot_points(ax, features):
     for feat in features:
         ax.scatter(*feat, s=2)
 
+def plot_ellipse(ax, means, vars):
+    colors = ["blue", "orange", "green"]
+    for mean, var in zip(means, vars):
+        x, y = ellipse_points(mean, var)
+        ax.plot(x, y)
 
-def boundary_contour(ax, classifier, feature_range, style, pad=1, delta=0.1):
+def boundary_contour(ax, classifier, feature_range, style, pad=2, delta=0.1):
     minx, miny, maxx, maxy = feature_range
     xs = np.arange(minx-pad, maxx+pad, delta)
     ys = np.arange(miny-pad, maxy+pad, delta)
@@ -30,9 +36,45 @@ def boundary_contour(ax, classifier, feature_range, style, pad=1, delta=0.1):
     colors = ["blue", "orange", "green"]
     for i in range(int(np.max(Z)) + 1):
         Zi = Z == i
-        CS = ax.contour(X, Y, Zi, levels=[0.5], colors=colors[i], linestyles=style, linewidths=3-i*0.5)
-    #ax.clabel(CS, inline=True, fontsize=10)
+        CS = ax.contour(X, Y, Zi, levels=[0.5], colors=colors[i], linestyles=style, linewidths=3-i*1)
+        #ax.clabel(CS, inline=True, fontsize=10, fmt={0.5: "test"})
 
+
+def make_graph(Ns, means, vars, xs, classifiers, out_file):
+    fig, ax = plt.subplots(figsize=(10, 10))
+
+    plot_points(ax, xs)
+    plot_ellipse(ax, means, vars)
+
+    feature_range = get_feature_range(xs)
+
+    custom_legend = []
+    custom_labels = []
+    for classifier in classifiers:
+        if classifier == "med":
+            boundary_contour(ax, get_MED(means), feature_range, 'solid')
+            custom_legend.append(Line2D([0], [0], color="black", linestyle="-"))
+            custom_labels.append("MED")
+        elif classifier == "ged":
+            boundary_contour(ax, get_GED(means, vars), feature_range, 'dashed')
+            custom_legend.append(Line2D([0], [0], color="black", linestyle="--"))
+            custom_labels.append("GED")
+        elif classifier == "map":
+            boundary_contour(ax, get_MAP(Ns, means, vars), feature_range, 'dotted')
+            custom_legend.append(Line2D([0], [0], color="black", linestyle=":"))
+            custom_labels.append("MAP")
+        elif classifier == "nn":
+            boundary_contour(ax, get_kNN(xs, 1), feature_range, 'dashed', delta=0.5)
+            custom_legend.append(Line2D([0], [0], color="black", linestyle="--"))
+            custom_labels.append("NN")
+        elif classifier == "knn":
+            boundary_contour(ax, get_kNN(xs, 5), feature_range, 'dashed', delta=0.5)
+            custom_legend.append(Line2D([0], [0], color="black", linestyle="--"))
+            custom_labels.append("kNN k=5")
+
+    plt.legend(custom_legend, custom_labels)
+    plt.savefig(out_file)
+    print(f"{out_file} created")
 
 
 mean_a = np.array([5, 10])
@@ -61,35 +103,56 @@ xd = gen_cluster(Nd, mean_d, var_d)
 xe = gen_cluster(Ne, mean_e, var_e)
 
 
-fig, ax1 = plt.subplots()
+make_graph(
+    (Na, Nb),
+    (mean_a, mean_b),
+    (var_a, var_b),
+    (xa, xb),
+    classifiers=("med", "ged", "map"),
+    out_file="images/case1_med_ged_map.png"
+)
 
-plot_points(ax1, (xa, xb))
+make_graph(
+    (Na, Nb),
+    (mean_a, mean_b),
+    (var_a, var_b),
+    (xa, xb),
+    classifiers=("nn",),
+    out_file="images/case1_nn.png"
+)
 
-feature_range = get_feature_range((xa, xb))
-med_classifier1 = get_MED((mean_a, mean_b))
-boundary_contour(ax1, med_classifier1, feature_range, 'solid')
+make_graph(
+    (Na, Nb),
+    (mean_a, mean_b),
+    (var_a, var_b),
+    (xa, xb),
+    classifiers=("knn",),
+    out_file="images/case1_knn.png"
+)
 
-ged_classifier1 = get_GED((mean_a, mean_b), (var_a, var_b))
-boundary_contour(ax1, ged_classifier1, feature_range, 'dashed')
+make_graph(
+    (Nc, Nd, Ne),
+    (mean_c, mean_d, mean_e),
+    (var_c, var_d, var_e),
+    (xc, xd, xe),
+    classifiers=("med", "ged", "map"),
+    out_file="images/case2_med_ged_map.png"
+)
 
-map_classifier1 = get_MAP((mean_a, mean_b), (var_a, var_b), (Na, Nb))
-boundary_contour(ax1, map_classifier1, feature_range, 'dotted')
+make_graph(
+    (Nc, Nd, Ne),
+    (mean_c, mean_d, mean_e),
+    (var_c, var_d, var_e),
+    (xc, xd, xe),
+    classifiers=("nn",),
+    out_file="images/case2_nn.png"
+)
 
-plt.savefig(f"images/1.png")
-
-fig, ax2 = plt.subplots()
-
-plot_points(ax2, (xc, xd, xe))
-
-feature_range = get_feature_range((xc, xd, xe))
-med_classifier2 = get_MED((mean_c, mean_d, mean_e))
-boundary_contour(ax2, med_classifier2, feature_range, 'solid')
-
-ged_classifier2 = get_GED((mean_c, mean_d, mean_e), (var_c, var_d, var_e))
-boundary_contour(ax2, ged_classifier2, feature_range, 'dashed')
-
-map_classifier2 = get_MAP((mean_c, mean_d, mean_e), (var_c, var_d, var_e), (Nc, Nd, Ne))
-boundary_contour(ax2, map_classifier2, feature_range, 'dotted')
-
-plt.savefig(f"images/2.png")
-
+make_graph(
+    (Nc, Nd, Ne),
+    (mean_c, mean_d, mean_e),
+    (var_c, var_d, var_e),
+    (xc, xd, xe),
+    classifiers=("knn",),
+    out_file="images/case2_knn.png"
+)
